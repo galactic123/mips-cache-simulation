@@ -115,11 +115,6 @@ void cache_data_write(uint32_t address)//给定地址，要求把地址所在的
                 }
             }
         }
-        if(tobeset<0)
-        {
-            printf("%d %d\n",set,tobeset);
-            exit(1);
-        }
         //准备写回主存
         uint32_t readdress = 0;
         readdress = (getline<<13)|(set<<5);//将要替换的行的源地址块头   
