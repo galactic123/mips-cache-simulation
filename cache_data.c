@@ -28,6 +28,7 @@ void data_init(){
         {
             cache_data.cache_data_set[i].cache_data_line[j].valid = 0;
             cache_data.cache_data_set[i].cache_data_line[j].iru = 0;
+            cache_data.cache_data_set[i].cache_data_line[j].dirty = 0;
         }
     }
 }
@@ -57,10 +58,10 @@ uint32_t cache_data_read(uint32_t address)
         }
     }
     waiting_data = 49;
-    cache_data_write(address);
+    cache_data_load(address);
     return 0xffffffff;
 }
-void cache_data_write(uint32_t address)//给定地址，要求把地址所在的块中读出一个块存到cache里
+void cache_data_load(uint32_t address)//给定地址，要求把地址所在的块中读出一个块存到cache里
 {
     //内存地址 = 行号19位 + 组号8位 + 块内地址5位
     
@@ -115,7 +116,9 @@ void cache_data_write(uint32_t address)//给定地址，要求把地址所在的
                 }
             }
         }
+
         //准备写回主存
+        if(cache_data.cache_data_set[set].cache_data_line[tobeset].dirty == 0)goto ok;//不脏的时候无需写回主存
         uint32_t readdress = 0;
         readdress = (getline<<13)|(set<<5);//将要替换的行的源地址块头   
         for(i=0;i<8;i++)//一个块是32 byte 要读八次
@@ -124,6 +127,7 @@ void cache_data_write(uint32_t address)//给定地址，要求把地址所在的
             mem_write_32(readdress,word);//将这一个字写回到主存
             readdress+=4;
         }
+        ok:;
         cache_data.cache_data_set[set].cache_data_line[tobeset].valid = 1;
         cache_data.cache_data_set[set].cache_data_line[tobeset].line = line;//对应第几个群
         cache_data.cache_data_set[set].cache_data_line[tobeset].iru = 0;        
@@ -144,12 +148,13 @@ void cache_data_write(uint32_t address)//给定地址，要求把地址所在的
 void cache_data_write_val(uint32_t address,uint32_t write)//把本应写在主存address里的write写到cache里
 {
     if(cache_data_read(address)==0xffffffff){
-        cache_data_write(address);
+        cache_data_load(address);
     }
     uint32_t line = address >> 13 ;//取前19位
     uint32_t set = (address >>5) &(0xFF);//取所对应的组号
     uint32_t inneraddress = address & 0x1f;
     uint32_t i = 0;
+     
     for(i=0;i<8;i++)
     {
         if(cache_data.cache_data_set[set].cache_data_line[i].valid==1)//当前位有效的时候
@@ -157,6 +162,7 @@ void cache_data_write_val(uint32_t address,uint32_t write)//把本应写在主�
             if(cache_data.cache_data_set[set].cache_data_line[i].line == line)//当前行号和对应的主存行号相同
             {
                 uint32_t j = inneraddress;//内部地址
+                cache_data.cache_data_set[set].cache_data_line[i].dirty = 1;
                 cache_data.cache_data_set[set].cache_data_line[i].data.mem[j]   = (uint8_t)(write>>0)&0xff;
                 cache_data.cache_data_set[set].cache_data_line[i].data.mem[j+1] = (uint8_t)(write>>8)&0xff;
                 cache_data.cache_data_set[set].cache_data_line[i].data.mem[j+2] = (uint8_t)(write>>16)&0xff;
