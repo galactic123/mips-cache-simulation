@@ -12,6 +12,7 @@ typedef struct //数据区，相当于一个块
 typedef struct //每行cache
 {
     bool valid;//是否可用
+    bool dirty;
     uint8_t iru;//lru位,因为8way，所以取后三位即可
     uint32_t line;//19位行号    
     Data_1 data;//数据区
@@ -26,9 +27,8 @@ typedef struct
 }Cache_data;
 extern Cache_data cache_data;
 void data_init();
-void get_data_set(uint32_t address);
 void cache_data_write_val(uint32_t address,uint32_t write);//写入一个块
-void cache_data_write(uint32_t address);//写入一个块
+void cache_data_load(uint32_t address);//写入一个块
 uint32_t cache_data_read(uint32_t address);//从给定本应读取的内存地址中读取数据
 extern int waiting_data;
 #endif
